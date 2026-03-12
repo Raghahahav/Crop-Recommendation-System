@@ -1,57 +1,121 @@
 # Smart Crop Recommendation System
 
-A full-stack web application to recommend the best crop using soil and weather conditions.
+An end-to-end AI-powered agriculture platform that recommends suitable crops based on soil nutrients and environmental conditions.
 
-## Project Structure
+The solution includes:
 
-- `backend/` → Spring Boot REST API + Spark MLlib model integration
-- `frontend/` → React (Vite) + Tailwind CSS dashboard UI
-- `crop_data.csv` → training dataset used by backend Spark model
+- A modern React dashboard for farmers
+- A Spring Boot REST API for prediction requests
+- Spark MLlib integration for RandomForest-based recommendations
+- Automatic fallback prediction path for newer Java runtimes
 
-## Backend (Spring Boot + Spark)
+---
 
-### Features
+## Key Features
 
-- `POST /recommend` endpoint
-- Validates input payload
-- Trains a Spark MLlib RandomForest model at startup
-- Predicts crop and returns:
+- Clean, responsive frontend built with React + Vite + TailwindCSS
+- Farm input form with validation, tooltips, icons, and loading states
+- REST API endpoint for crop recommendation
+- Machine learning prediction using 7 parameters:
+  - Nitrogen (`N`)
+  - Phosphorus (`P`)
+  - Potassium (`K`)
+  - Temperature
+  - Humidity
+  - Soil pH
+  - Rainfall
+- Spark RandomForest model training at startup (when runtime supports it)
+- Safe fallback to KNN predictor if Spark is not fully compatible with current JDK
 
-```json
-{
-  "recommended_crop": "Rice"
-}
+---
+
+## Repository Structure
+
+```text
+CropRecommendationSpark/
+├── backend/                  # Spring Boot API + ML service
+├── frontend/                 # React UI (Vite + Tailwind)
+├── crop_data.csv             # Training dataset
+└── README.md
 ```
 
-### Run Backend
+---
 
-From project root:
+## System Workflow (File-wise)
+
+| Step | Workflow Stage             | Primary File(s)                                                                                  | What Happens                                                                                     | Output                                   |
+| ---- | -------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | ---------------------------------------- |
+| 1    | User input collection      | `frontend/src/components/RecommendationForm.jsx`                                                 | Farmer enters N, P, K, temperature, humidity, pH, rainfall via validated form inputs.            | Structured input values in UI state      |
+| 2    | Client validation + submit | `frontend/src/App.jsx`                                                                           | Frontend validates numeric values and sends POST request to backend API.                         | JSON request to `/recommend`             |
+| 3    | API call transport         | `frontend/src/lib/api.js`                                                                        | Axios client sends payload to backend base URL.                                                  | HTTP request/response handling           |
+| 4    | Request validation         | `backend/src/main/java/com/smartcrop/recommendation/model/RecommendationRequest.java`            | Spring validates required fields and value ranges.                                               | Valid request object or validation error |
+| 5    | Endpoint orchestration     | `backend/src/main/java/com/smartcrop/recommendation/controller/RecommendationController.java`    | Controller receives request, calls service, formats success/error responses.                     | `recommended_crop` response JSON         |
+| 6    | ML prediction service      | `backend/src/main/java/com/smartcrop/recommendation/service/SparkCropRecommendationService.java` | Service selects Spark RandomForest path or fallback KNN path depending on runtime compatibility. | Predicted crop label                     |
+| 7    | Dataset source             | `crop_data.csv`                                                                                  | Historical labeled crop data used for model training / fallback nearest-neighbor lookup.         | Prediction knowledge base                |
+| 8    | Result rendering           | `frontend/src/components/ResultCard.jsx`                                                         | UI displays recommended crop and description.                                                    | Farmer-friendly recommendation card      |
+
+---
+
+## Recommendation Algorithm (Based on Files)
+
+| Algorithm Layer              | File                                                                                             | Implementation Summary                                                                                                              | Runtime Behavior                                                      |
+| ---------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Feature set definition       | `backend/src/main/java/com/smartcrop/recommendation/service/SparkCropRecommendationService.java` | Uses 7 agronomic features: `N`, `P`, `K`, `temperature`, `humidity`, `ph`, `rainfall`.                                              | Common for both Spark and fallback paths                              |
+| Primary model: RandomForest  | `backend/src/main/java/com/smartcrop/recommendation/service/SparkCropRecommendationService.java` | Builds Spark `VectorAssembler`, applies `StringIndexer`, trains `RandomForestClassifier`, predicts class index, maps to crop label. | Used when Spark initializes successfully                              |
+| Fallback model: KNN voting   | `backend/src/main/java/com/smartcrop/recommendation/service/SparkCropRecommendationService.java` | Loads `crop_data.csv`, computes Euclidean distance to all samples, takes top-k neighbors, uses inverse-distance weighted vote.      | Used when Spark path is unavailable (e.g., newer JDK incompatibility) |
+| Request contract enforcement | `backend/src/main/java/com/smartcrop/recommendation/model/RecommendationRequest.java`            | Ensures all required inputs are present and within bounds before prediction logic executes.                                         | Prevents invalid data from entering model pipeline                    |
+| API response contract        | `backend/src/main/java/com/smartcrop/recommendation/model/RecommendationResponse.java`           | Returns standardized response key: `recommended_crop`.                                                                              | Keeps frontend/backend integration consistent                         |
+| User-visible interpretation  | `frontend/src/lib/cropInfo.js` and `frontend/src/components/ResultCard.jsx`                      | Maps predicted crop to a short explanatory description for user readability.                                                        | Converts raw prediction into actionable recommendation                |
+
+---
+
+## Technology Stack
+
+### Frontend
+
+- React
+- Vite
+- Tailwind CSS
+- Framer Motion
+- Axios
+
+### Backend
+
+- Java 17+
+- Spring Boot
+- Apache Spark MLlib (RandomForest)
+- Maven
+
+---
+
+## Prerequisites
+
+- Node.js 18+
+- npm 9+
+- Java 17+ (Java 17 recommended for full Spark path)
+- Maven 3.9+
+
+---
+
+## Local Setup & Run
+
+### 1) Clone and move into project
+
+```bash
+git clone <your-repository-url>
+cd CropRecommendationSpark
+```
+
+### 2) Run backend
 
 ```bash
 mvn -f backend/pom.xml -DskipTests compile
 mvn -f backend/pom.xml -DskipTests spring-boot:run
 ```
 
-Backend runs at: `http://localhost:8080`
+Backend URL: `http://localhost:8080`
 
-### Java Version Note
-
-- Recommended for Spark RandomForest path: **Java 17**
-- On newer JDKs (for example Java 25), Spark may fail with `getSubject is not supported`.
-- In that case, the app automatically falls back to a built-in KNN predictor so `/recommend` still works.
-
-## Frontend (React + Tailwind)
-
-### Features
-
-- Modern responsive dashboard UI
-- Agricultural green palette and card layout
-- Tooltips, icons, validation, smooth animations
-- Loading state while waiting for prediction
-
-### Run Frontend
-
-From project root:
+### 3) Run frontend (new terminal)
 
 ```bash
 cd frontend
@@ -59,30 +123,17 @@ npm install
 npm run dev
 ```
 
-Frontend runs at: `http://localhost:5173`
+Frontend URL: `http://localhost:5173`
 
-## Quick Start (Run Everything)
+---
 
-Open two terminals from project root.
+## API Contract
 
-### Terminal 1 (Backend)
+### Endpoint
 
-```bash
-mvn -f backend/pom.xml -DskipTests spring-boot:run
-```
+`POST /recommend`
 
-### Terminal 2 (Frontend)
-
-```bash
-cd frontend
-npm run dev
-```
-
-Then open `http://localhost:5173`.
-
-## API Request Example
-
-`POST http://localhost:8080/recommend`
+### Request Body
 
 ```json
 {
@@ -96,7 +147,15 @@ Then open `http://localhost:5173`.
 }
 ```
 
-Quick test with curl:
+### Success Response
+
+```json
+{
+  "recommended_crop": "Rice"
+}
+```
+
+### Example cURL
 
 ```bash
 curl -X POST "http://localhost:8080/recommend" \
@@ -104,10 +163,45 @@ curl -X POST "http://localhost:8080/recommend" \
   -d '{"N":90,"P":40,"K":40,"temperature":21,"humidity":80,"ph":6.5,"rainfall":200}'
 ```
 
-## Notes
+---
 
-- Backend automatically searches for `crop_data.csv` in:
-  1. `backend/src/main/resources/`
-  2. `backend/`
-  3. project root (`../crop_data.csv`)
-- Current setup is local development friendly (`SparkSession` uses `local[*]`).
+## Runtime Compatibility Notes
+
+- **Recommended runtime:** Java 17 for Spark RandomForest flow.
+- On newer JDKs (for example Java 25), Spark/Hadoop may throw `getSubject is not supported`.
+- The backend is designed to continue serving predictions through a fallback KNN predictor, so API uptime is preserved.
+
+---
+
+## Troubleshooting
+
+### Frontend shows “Validation failed”
+
+- Ensure all 7 fields are numeric and present.
+- Backend now returns field-level validation details; check the exact message in the UI.
+
+### Backend not reachable (`curl` exit code 7)
+
+- Confirm backend process is running.
+- Verify port 8080 is available.
+- Re-run backend command from repository root.
+
+### Spark startup warnings on macOS / newer JDK
+
+- This is expected on some JDK versions.
+- Fallback predictor will still provide recommendations.
+
+---
+
+## Future Enhancements
+
+- Persist and version trained ML models
+- Add authentication and user history
+- Deploy backend + frontend with Docker
+- Add analytics dashboard for model confidence and trends
+
+---
+
+## License
+
+This project is for educational and demonstration use. Add a formal LICENSE file if you plan public distribution.
