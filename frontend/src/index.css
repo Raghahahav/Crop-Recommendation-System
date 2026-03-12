@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-gradient-to-br from-leaf-50 via-white to-earth-100 text-slate-800 min-h-screen;
+}
+
+.bg-grid {
+  background-size: 24px 24px;
+}
