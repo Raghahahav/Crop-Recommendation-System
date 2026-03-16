@@ -1,6 +1,6 @@
 # Smart Crop Recommendation System
 
-An end-to-end AI-powered agriculture platform that recommends suitable crops based on soil nutrients and environmental conditions.
+An end-to-end java+spark based agriculture platform that recommends suitable crops based on soil nutrients and environmental conditions.
 
 The solution includes:
 
