@@ -164,6 +164,49 @@ curl -X POST "http://localhost:8080/recommend" \
 ```
 
 ---
+to execute this in terminal spark+MLib java code in mac
+Correct Way to Compile a Spark Java Program (Mac)
+
+First set the SPARK_HOME variable.
+
+1️⃣ Set SPARK_HOME
+
+Run:
+
+export SPARK_HOME=/opt/homebrew/Cellar/apache-spark/4.1.1/libexec
+
+Verify:
+
+echo $SPARK_HOME
+
+You should see:
+
+/opt/homebrew/Cellar/apache-spark/4.1.1/libexec
+2️⃣ Compile the Java program
+
+Go to your project folder:
+
+cd ~/Desktop/CropRecommendationSpark
+
+Now compile:
+
+javac -cp "$SPARK_HOME/jars/*" CropRecommendation.java
+
+If successful, it will generate:
+
+CropRecommendation.class
+3️⃣ Package into a JAR
+
+Run:
+
+jar cvf CropRecommendation.jar *.class
+
+Now you will have:
+
+CropRecommendation.jar
+4️⃣ Run with Spark
+spark-submit --class CropRecommendation CropRecommendation.jar
+---------
 
 ## Runtime Compatibility Notes
 
