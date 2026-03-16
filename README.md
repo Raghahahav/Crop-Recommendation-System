@@ -102,7 +102,7 @@ CropRecommendationSpark/
 ### 1) Clone and move into project
 
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/Raghahahav/Crop-Recommendation-System
 cd CropRecommendationSpark
 ```
 
